@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NoteLite Pro+</title>
+<style>
+body{margin:0;font-family:Arial;background:#f1f3f4}
+.hidden{display:none}
+.top{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.avatar{width:40px;height:40px;border-radius:50%;background:#1a73e8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;cursor:pointer}
+.container{max-width:500px;margin:auto;padding:12px}
+.card{background:#fff;padding:12px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px}
+.note{padding:10px;border-radius:10px}
+.note img{max-width:100%;border-radius:8px;margin-top:6px}
+.note small{display:block;margin-top:6px;color:#555}
+input,textarea,button{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid #ccc}
+button{background:#1a73e8;color:#fff;border:none;cursor:pointer}
+.fab{position:fixed;right:20px;bottom:20px;width:60px;height:60px;border-radius:50%;background:#1a73e8;color:#fff;font-size:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.3);cursor:pointer}
+.full{position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:10;padding:12px;overflow:auto}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock" class="container">
+<div class="card" style="margin-top:80px">
+<h3>🔐 Enter Password</h3>
+<input id="pwd" type="password" placeholder="Password">
+<button onclick="unlock()">Unlock</button>
+<p id="err" style="color:red"></p>
+</div></div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+<div class="top">
+<b>📝 NoteLite</b>
+<div class="avatar" onclick="togglePwd()">⚙</div>
+</div>
+<div class="container">
+<input id="search" placeholder="Search..." oninput="render()">
+<div class="grid" id="list"></div>
+</div>
+</div>
+
+<!-- FULL NOTE -->
+<div id="editor" class="full hidden">
+<button onclick="closeEditor()">⬅ Back</button>
+<input id="title" placeholder="Title">
+<textarea id="text" placeholder="Write note..." style="height:200px"></textarea>
+<input type="file" id="img" accept="image/*">
+<input type="color" id="color" value="#fff9c4">
+<button onclick="saveNote()">Save</button>
+</div>
+
+<!-- PASSWORD CHANGE -->
+<div id="pwdBox" class="full hidden">
+<button onclick="togglePwd()">⬅ Back</button>
+<h3>Change Password</h3>
+<input id="newpwd" placeholder="New password">
+<button onclick="changePwd()">Change</button>
+</div>
+
+<div class="fab" onclick="openEditor()">+</div>
+
+<script>
+let PASSWORD=localStorage.getItem('pwd')||'1234';
+let editIndex=null;
+
+window.onload = () => {
+  // Always show password screen on app start
+  lock.classList.remove('hidden');
+  app.classList.add('hidden');
+}
+
+function unlock(){if(pwd.value===PASSWORD){localStorage.setItem('open','1');show()}else err.innerText='Wrong password'}
+function show(){lock.classList.add('hidden');app.classList.remove('hidden');render()}
+function togglePwd(){pwdBox.classList.toggle('hidden')}
+
+function notes(){return JSON.parse(localStorage.getItem('notes')||'[]')}
+function save(n){localStorage.setItem('notes',JSON.stringify(n))}
+
+function openEditor(i=null){editor.classList.remove('hidden');editIndex=i;if(i!==null){const n=notes()[i];title.value=n.title;text.value=n.text;color.value=n.color}else{title.value=text.value=''}}
+function closeEditor(){editor.classList.add('hidden')}
+
+function saveNote(){const n=notes();const data={title:title.value,text:text.value,color:color.value,time:new Date().toLocaleString(),img:''};const f=img.files[0];if(f){const r=new FileReader();r.onload=()=>{data.img=r.result;finalSave(data,n)};r.readAsDataURL(f)}else finalSave(data,n)}
+function finalSave(d,n){if(editIndex!==null)n[editIndex]=d;else n.push(d);save(n);closeEditor();render()}
+
+function render(){const q=search.value.toLowerCase();list.innerHTML='';notes().forEach((n,i)=>{if(!n.text.toLowerCase().includes(q)&&!n.title.toLowerCase().includes(q))return;const d=document.createElement('div');d.className='note';d.style.background=n.color;d.innerHTML=`<b>${n.title}</b><div>${n.text}</div>${n.img?`<img src='${n.img}'>`:''}<small>${n.time}</small><button onclick='openEditor(${i})'>Edit</button><button onclick='del(${i})'>Delete</button>`;list.appendChild(d)})}
+
+function del(i){const n=notes();n.splice(i,1);save(n);render()}
+
+function changePwd(){if(newpwd.value){PASSWORD=newpwd.value;localStorage.setItem('pwd',PASSWORD);alert('Password changed');togglePwd()}}
+
+// Export
+function exportNotes(){const t=notes().map(n=>`${n.title}\n${n.text}\n${n.time}\n`).join('\n---\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain'}));a.download='notes.txt';a.click()}
+</script>
+</body>
+</html>
